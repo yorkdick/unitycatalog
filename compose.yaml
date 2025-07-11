@@ -2,26 +2,82 @@ name: unitycatalog
 
 services:
 
+  db:
+    image: mysql:8.4.5
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ucdb
+      MYSQL_USER: uc_default_user
+      MYSQL_PASSWORD: uc_default_password       
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - '3306:3306'
+
   server:
-    image: unitycatalog/unitycatalog:latest
+    image: yorkdick/test-unitycatalog:latest
     ports:
       - "8080:8080"
     volumes:
-      - type: bind
-        source: ./etc/conf
-        target: /opt/unitycatalog/etc/conf
-      - type: volume
-        source: unitycatalog_data
-        target: /opt/unitycatalog/etc/data
+      - ./etc/conf:/home/unitycatalog/etc/conf/
+      - ucdata:/home/unitycatalog/etc/data
+      - ./etc/logs:/home/unitycatalog/etc/logs
+      - ./jupyter/data:/opt/data
+    depends_on:
+      - db
   ui:
-    build:
-      context: ui/
-      dockerfile: Dockerfile
+    image: unitycatalog/unitycatalog-ui:main-aadc6fc
     ports:
       - "3000:3000"
     depends_on:
       - server
+  
+  spark:
+    image: docker.io/bitnami/spark:3.5.5
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    volumes:
+      - ./jupyter/data:/opt/data
+    ports:
+      - '18080:8080'
+      - '7077:7077'
+  spark-worker:
+    image: docker.io/bitnami/spark:3.5.5
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    volumes:
+      - ./jupyter/data:/opt/data
+    ports:
+      - '8081:8081'
+
+  jupyterhub:
+    image: yordkick/jupyter-spark3.5.5-uctest
+    ports:
+      - "8000:8000"
+    volumes:
+      - jupyterhub_data:/srv/jupyterhub
+      - ./jupyter/uctest/notebooks:/home/uctest/notebooks
+      - ./jupyter/data:/opt/data
+      - ./jupyter/ivy2:/home/uctest/.ivy2
+      - ./jupyter/jupyterhub_config.py:/etc/jupyterhub_config.py
+    command: ["jupyterhub", "-f", "/etc/jupyterhub_config.py"]
 
 volumes:
-  # Persist docker volume across container restarts
-  unitycatalog_data:
+  ucdata:
+  mysql_data:
+  jupyterhub_data:
+  spark_data:

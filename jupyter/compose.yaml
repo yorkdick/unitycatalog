@@ -1,0 +1,20 @@
+name: jupyterhub
+
+services:
+
+  jupyterhub:
+    image: yorkdick/jupyter-test:latest
+    ports:
+      - "8888:8000"
+    volumes:
+      - jupyterhub_data:/srv/jupyterhub
+      - ./uctest/notebooks:/home/uctest/notebooks
+      # - ./data:/opt/data
+      - ./ivy2:/home/uctest/.ivy2
+      - ./jupyterhub_config.py:/etc/jupyterhub_config.py
+    command: ["jupyterhub", "-f", "/etc/jupyterhub_config.py"]
+    # command: ["jupyterhub" ]
+    # restart: always
+
+volumes:
+  jupyterhub_data:

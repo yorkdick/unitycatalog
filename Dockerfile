@@ -11,6 +11,8 @@ ENV HOME=$HOME
 
 WORKDIR $HOME
 
+ENV COURSIER_MAVEN_REPOSITORIES="https://maven.aliyun.com/repository/public|https://repo1.maven.org/maven2"
+
 COPY --parents build/ project/ examples/ server/ api/ clients/python/ version.sbt build.sbt ./
 
 RUN apk add --no-cache bash && ./build/sbt -info clean package
@@ -42,6 +44,7 @@ COPY --from=base --parents \
 # Create a service user with read and execute permissions and write permissions of the ./etc directory
 RUN <<EOF
 apk add --no-cache bash
+RUN apk add --no-cache libc6-compat
 addgroup -S $USER
 adduser -S -G $USER $USER
 chmod -R 550 $HOME

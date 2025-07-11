@@ -1,0 +1,10 @@
+FROM unitycatalog/unitycatalog:v0.3.0
+
+USER root
+RUN apk add --no-cache libc6-compat 
+COPY server/target/classes /home/unitycatalog/server/target/classes
+COPY server/target/unitycatalog-server-0.3.0.jar /home/unitycatalog/server/target/
+COPY bin/start-uc-server /home/unitycatalog/bin/
+COPY etc/jars/mysql-connector-j-8.0.31.jar /home/unitycatalog/etc/jars/
+RUN  chown -R unitycatalog:unitycatalog /home/unitycatalog
+USER unitycatalog

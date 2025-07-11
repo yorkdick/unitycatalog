@@ -1,0 +1,8 @@
+FROM yorkdick/test-unitycatalog:1.1
+
+ARG JAVA_HOME=/usr/lib/jvm/default-jvm
+
+USER unitycatalog
+
+COPY bin/start-uc-server /home/unitycatalog/bin/
+COPY etc/client-truststore-simple.jks /home/unitycatalog/etc/

@@ -15,8 +15,9 @@ generate_jar() {
 
 # This function starts the unity catalog server
 run_uc_server_java_command() {
-  SERVER_JAVA_COMMAND="java -cp $(cat "$1") io.unitycatalog.server.UnityCatalogServer"
+  SERVER_JAVA_COMMAND="java -cp /home/unitycatalog/etc/jars/mysql-connector-j-8.0.31.jar:$(cat "$1") -Djavax.net.ssl.trustStore=/home/unitycatalog/etc/client-truststore-simple.jks -Djavax.net.ssl.trustStorePassword=changeit io.unitycatalog.server.UnityCatalogServer"
   shift
+  # echo $SERVER_JAVA_COMMAND
   $SERVER_JAVA_COMMAND "$@" || exit
 }
 
@@ -26,16 +27,15 @@ run_in_source_code() {
   SERVER_JAR=$(find "$SERVER_TARGET_DIR" -name "unitycatalog-server*.jar" | head -n 1)
 
   if [ -z "$SERVER_JAR" ]; then
-      echo "Server JAR not found starting with 'unitycatalog-server*' in the target directory '$SERVER_TARGET_DIR'."
-      generate_jar
+    echo "Server JAR not found starting with 'unitycatalog-server*' in the target directory '$SERVER_TARGET_DIR'."
+    generate_jar
   fi
 
   SERVER_CLASSPATH_FILE="$SERVER_TARGET_DIR/classpath"
   if [ -z "$SERVER_CLASSPATH_FILE" ]; then
-      echo "No classpath file found in the target directory '$SERVER_TARGET_DIR'."
-      generate_jar
+    echo "No classpath file found in the target directory '$SERVER_TARGET_DIR'."
+    generate_jar
   fi
-
   run_uc_server_java_command "$SERVER_CLASSPATH_FILE" "$@"
 }
 

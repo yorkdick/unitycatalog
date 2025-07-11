@@ -213,27 +213,46 @@ public class AuthService {
   }
 
   private Cookie createCookie(String key, String value, String path, String maxAge) {
-    return Cookie.secureBuilder(key, value)
+    // return Cookie.secureBuilder(key, value)
+    // .path(path)
+    // .maxAge(Duration.parse(maxAge).getSeconds())
+    // .build();
+    return Cookie.builder(key, value)
+        .secure(false)
+        .httpOnly(true)
         .path(path)
         .maxAge(Duration.parse(maxAge).getSeconds())
         .build();
+    // return Cookie.CookieBuilder(key, value)
+    // .secure(false)
+    // .httpOnly(true)
+    // .path(path)
+    // .maxAge(Duration.parse(maxAge).getSeconds())
+    // .build();
   }
 
   // NOTE:
-  // When specifying `application/x-www-form-urlencoded` as the content type in the OpenAPI schema,
+  // When specifying `application/x-www-form-urlencoded` as the content type in
+  // the OpenAPI schema,
   // the OpenAPI Generator does not create request models from the schema.
-  // Moreover, directly accessing parameters from the body without a model causes issues with
+  // Moreover, directly accessing parameters from the body without a model causes
+  // issues with
   // Armeria, particularly when the `ext` query parameter is included.
   //
-  // To resolve this, instead of redefining a request model solely for Armeria's parameter
+  // To resolve this, instead of redefining a request model solely for Armeria's
+  // parameter
   // injection,
-  // a `RequestConverterFunction` for `OAuthTokenExchangeRequest` is implemented here.
-  // This approach ensures a single model is used across both the `controlApi` and `cli` projects,
+  // a `RequestConverterFunction` for `OAuthTokenExchangeRequest` is implemented
+  // here.
+  // This approach ensures a single model is used across both the `controlApi` and
+  // `cli` projects,
   // preserving the principle of a single source of truth.
   //
   // SEE:
-  // - https://armeria.dev/docs/server-annotated-service/#getting-a-query-parameter
-  // - https://armeria.dev/docs/server-annotated-service/#injecting-a-parameter-as-an-enum-type
+  // -
+  // https://armeria.dev/docs/server-annotated-service/#getting-a-query-parameter
+  // -
+  // https://armeria.dev/docs/server-annotated-service/#injecting-a-parameter-as-an-enum-type
   private static class ToOAuthTokenExchangeFormConverter implements RequestConverterFunction {
     private static final ObjectMapper mapper = new ObjectMapper();
 

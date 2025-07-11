@@ -27,10 +27,15 @@ public class TemporaryPathCredentialsService {
     }
 
     @Post("")
-    @AuthorizeExpression("#authorize(#principal, #metastore, OWNER)")
-    @AuthorizeKey(METASTORE)
+    // @AuthorizeExpression("""
+    // (#authorizeAny(#principal, #catalog, OWNER, USE_CATALOG) &&
+    // #authorize(#principal, #schema, OWNER)) ||
+    // (#authorizeAny(#principal, #catalog, OWNER, USE_CATALOG) &&
+    // #authorizeAll(#principal, #schema, USE_SCHEMA, CREATE_TABLE))
+    // """)
+    // @AuthorizeKey(METASTORE)
     public HttpResponse generateTemporaryPathCredential(
-        GenerateTemporaryPathCredential generateTemporaryPathCredential) {
+            GenerateTemporaryPathCredential generateTemporaryPathCredential) {
         return HttpResponse.ofJson(
                 cloudCredentialVendor.vendCredential(
                         generateTemporaryPathCredential.getUrl(),
