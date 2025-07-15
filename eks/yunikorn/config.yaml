@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: yunikorn-configs
+  namespace: yunikorn
+data:
+  admissionController.filtering.processNamespaces: ""
+  admissionController.filtering.bypassNamespaces: "^kube-system$"
+  admissionController.filtering.labelNamespaces: ""
+  admissionController.filtering.noLabelNamespaces: ""
+  admissionController.filtering.generateUniqueAppId: "false"
+  admissionController.accessControl.bypassAuth: "false"
+  admissionController.accessControl.trustControllers: "true"
+  admissionController.accessControl.systemUsers: "^system:serviceaccount:kube-system:"
+  admissionController.accessControl.externalUsers: ""
+  admissionController.accessControl.externalGroups: ""
+  queues.yaml: |
+    partitions:
+      - name: default
+        placementrules:
+          - name: tag
+            value: namespace
+            create: true
+        queues:
+          - name: root
+            submitacl: '*'

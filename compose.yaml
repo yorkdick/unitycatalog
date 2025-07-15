@@ -16,7 +16,7 @@ services:
       - '3306:3306'
 
   server:
-    image: yorkdick/test-unitycatalog:latest
+    image: yorkdick/unitycatalog:1.9
     ports:
       - "8080:8080"
     volumes:
@@ -24,14 +24,10 @@ services:
       - ucdata:/home/unitycatalog/etc/data
       - ./etc/logs:/home/unitycatalog/etc/logs
       - ./jupyter/data:/opt/data
+    environment:
+      - JAVA_OPTS=-Xmx1512m -Xms512m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=256m
     depends_on:
       - db
-  ui:
-    image: unitycatalog/unitycatalog-ui:main-aadc6fc
-    ports:
-      - "3000:3000"
-    depends_on:
-      - server
   
   spark:
     image: docker.io/bitnami/spark:3.5.5

@@ -19,15 +19,17 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import io.unitycatalog.server.service.AuthService;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.time.Duration;
 
 public class JwksOperations {
 
-  private final WebClient webClient = WebClient.builder().build();
+  private final WebClient webClient = WebClient.builder().responseTimeout(Duration.ofSeconds(5)).build();
   private static final ObjectMapper mapper = new ObjectMapper();
   private final SecurityContext securityContext;
 
@@ -44,8 +46,8 @@ public class JwksOperations {
 
     if (!"RSA".equalsIgnoreCase(jwk.getPublicKey().getAlgorithm())) {
       throw new OAuthInvalidRequestException(ErrorCode.ABORTED,
-              String.format("Invalid algorithm '%s' for issuer '%s'",
-                      jwk.getPublicKey().getAlgorithm(), issuer));
+          String.format("Invalid algorithm '%s' for issuer '%s'",
+              jwk.getPublicKey().getAlgorithm(), issuer));
     }
 
     Algorithm algorithm = algorithmForJwk(jwk);
@@ -60,7 +62,7 @@ public class JwksOperations {
       case "RS384" -> Algorithm.RSA384((RSAPublicKey) jwk.getPublicKey(), null);
       case "RS512" -> Algorithm.RSA512((RSAPublicKey) jwk.getPublicKey(), null);
       default -> throw new OAuthInvalidClientException(ErrorCode.ABORTED,
-              String.format("Unsupported algorithm: %s", jwk.getAlgorithm()));
+          String.format("Unsupported algorithm: %s", jwk.getAlgorithm()));
     };
   }
 
@@ -90,13 +92,16 @@ public class JwksOperations {
       LOGGER.debug("path: {}", path);
 
       String response = webClient
-              .get(path)
-              .aggregate()
-              .join()
-              .contentUtf8();
+          .get(path)
+          .aggregate()
+          .get(5, TimeUnit.SECONDS)
+          .contentUtf8();
+
+      LOGGER.debug("Get response {} from path", response, path);
 
       // TODO: We should cache this. No need to fetch it each time.
-      Map<String, Object> configMap = mapper.readValue(response, new TypeReference<>() {});
+      Map<String, Object> configMap = mapper.readValue(response, new TypeReference<>() {
+      });
 
       if (configMap == null || configMap.isEmpty()) {
         throw new OAuthInvalidRequestException(ErrorCode.ABORTED, "Could not get issuer configuration");

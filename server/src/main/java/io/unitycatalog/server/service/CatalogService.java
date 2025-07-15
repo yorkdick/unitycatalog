@@ -55,8 +55,7 @@ public class CatalogService extends AuthorizedService {
   public HttpResponse listCatalogs(
       @Param("max_results") Optional<Integer> maxResults,
       @Param("page_token") Optional<String> pageToken) {
-    ListCatalogsResponse listCatalogsResponse =
-        catalogRepository.listCatalogs(maxResults, pageToken);
+    ListCatalogsResponse listCatalogsResponse = catalogRepository.listCatalogs(maxResults, pageToken);
 
     filterCatalogs("""
         #authorize(#principal, #metastore, OWNER) ||
@@ -90,7 +89,7 @@ public class CatalogService extends AuthorizedService {
   @Delete("/{name}")
   @AuthorizeExpression("""
       #authorize(#principal, #metastore, OWNER) ||
-      #authorizeAny(#principal, #catalog, OWNER, USE_CATALOG)
+      #authorize(#principal, #catalog, OWNER)
       """)
   @AuthorizeKey(METASTORE)
   public HttpResponse deleteCatalog(
@@ -109,11 +108,10 @@ public class CatalogService extends AuthorizedService {
         principalId,
         expression,
         entries,
-        ci ->
-            Map.of(
-                METASTORE,
-                metastoreRepository.getMetastoreId(),
-                CATALOG,
-                UUID.fromString(ci.getId())));
+        ci -> Map.of(
+            METASTORE,
+            metastoreRepository.getMetastoreId(),
+            CATALOG,
+            UUID.fromString(ci.getId())));
   }
 }

@@ -52,10 +52,10 @@ public class SchemaService extends AuthorizedService {
   public HttpResponse createSchema(
       @AuthorizeKey(value = CATALOG, key = "catalog_name") CreateSchema createSchema) {
     SchemaInfo schemaInfo = schemaRepository.createSchema(createSchema);
-    
+
     CatalogInfo catalogInfo = catalogRepository.getCatalog(schemaInfo.getCatalogName());
     initializeHierarchicalAuthorization(schemaInfo.getSchemaId(), catalogInfo.getId());
-    
+
     return HttpResponse.ofJson(schemaInfo);
   }
 
@@ -65,13 +65,13 @@ public class SchemaService extends AuthorizedService {
       @Param("catalog_name") String catalogName,
       @Param("max_results") Optional<Integer> maxResults,
       @Param("page_token") Optional<String> pageToken) {
-    ListSchemasResponse listSchemasResponse =
-        schemaRepository.listSchemas(catalogName, maxResults, pageToken);
-    filterSchemas("""
-        #authorize(#principal, #metastore, OWNER) ||
-        #authorize(#principal, #catalog, OWNER) ||
-        (#authorize(#principal, #schema, USE_SCHEMA) && #authorizeAny(#principal, #catalog, OWNER, USE_CATALOG))
-        """,
+    ListSchemasResponse listSchemasResponse = schemaRepository.listSchemas(catalogName, maxResults, pageToken);
+    filterSchemas(
+        """
+            #authorize(#principal, #metastore, OWNER) ||
+            #authorize(#principal, #catalog, OWNER) ||
+            (#authorizeAny(#principal, #schema, OWNER, USE_SCHEMA) && #authorizeAny(#principal, #catalog, OWNER, USE_CATALOG))
+            """,
         listSchemasResponse.getSchemas());
     return HttpResponse.ofJson(listSchemasResponse);
   }
@@ -97,7 +97,8 @@ public class SchemaService extends AuthorizedService {
   @AuthorizeKey(METASTORE)
   public HttpResponse updateSchema(
       @Param("full_name") @AuthorizeKey(SCHEMA) String fullName, UpdateSchema updateSchema) {
-    // TODO: This method does not adhere to the complete access control rules of the Databricks
+    // TODO: This method does not adhere to the complete access control rules of the
+    // Databricks
     // Unity Catalog
     return HttpResponse.ofJson(schemaRepository.updateSchema(fullName, updateSchema));
   }
@@ -114,14 +115,14 @@ public class SchemaService extends AuthorizedService {
       @Param("force") Optional<Boolean> force) {
     SchemaInfo schemaInfo = schemaRepository.getSchema(fullName);
     schemaRepository.deleteSchema(fullName, force.orElse(false));
-    
+
     CatalogInfo catalogInfo = catalogRepository.getCatalog(schemaInfo.getCatalogName());
-    
+
     // First remove any child table links
     authorizer.removeHierarchyChildren(UUID.fromString(schemaInfo.getSchemaId()));
     // Then remove schema from catalog and clear authorizations
     removeHierarchicalAuthorizations(schemaInfo.getSchemaId(), catalogInfo.getId());
-    
+
     return HttpResponse.of(HttpStatus.OK);
   }
 

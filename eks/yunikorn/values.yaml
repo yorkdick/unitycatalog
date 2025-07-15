@@ -1,0 +1,7 @@
+nodeSelector:
+  nodegroup: oss-poc-eks-test-ng-global
+admissionController:
+  nodeSelector:
+    nodegroup: oss-poc-eks-test-ng-global
+  service:
+    type: LoadBalancer

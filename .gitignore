@@ -49,4 +49,4 @@ dist/
 Pipfile
 jupyter/ivy2
 etc/data
-spark/
+eks/spark/jars/

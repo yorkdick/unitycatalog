@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unity-catalog
+  labels:
+    app: unity-catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unity-catalog
+  template:
+    metadata:
+      labels:
+        app: unity-catalog
+    spec:
+      containers:
+        - name: unity-catalog
+          image: unitycatalog/unitycatalog:latest
+          volumeMounts:
+            - name: uc-conf-volume
+              mountPath: /home/unitycatalog/etc/conf
+      volumes:
+        - name: uc-conf-volume
+          persistentVolumeClaim:
+            claimName: uc-conf-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: unity-catalog-service
+spec:
+  selector:
+    app: unity-catalog
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+  type: NodePort
