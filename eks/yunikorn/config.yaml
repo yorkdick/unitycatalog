@@ -4,6 +4,15 @@ metadata:
   name: yunikorn-configs
   namespace: yunikorn
 data:
+  service.policyGroup: "queues"
+  service.schedulingInterval: "1s"
+  service.volumeBindTimeout: "10m"
+  service.dispatchTimeout: "5m"
+  service.disableGangScheduling: "false"
+  service.enableConfigHotRefresh: "true"
+  log.level: "INFO"
+  admissionController.webHook.amServiceName: "yunikorn-admission-controller-service"
+  admissionController.webHook.schedulerServiceAddress: "yunikorn-service:9080"
   admissionController.filtering.processNamespaces: ""
   admissionController.filtering.bypassNamespaces: "^kube-system$"
   admissionController.filtering.labelNamespaces: ""
@@ -24,3 +33,13 @@ data:
         queues:
           - name: root
             submitacl: '*'
+            queues:
+              - name: workspacedev
+                maxapplications: 20
+                resources:
+                  guaranteed:
+                    vcore: 1
+                    memory: 1G
+                  max:
+                    vcore: 20
+                    memory: 600G
