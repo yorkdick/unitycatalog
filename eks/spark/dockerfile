@@ -1,5 +1,29 @@
-FROM spark:3.5.5
+FROM maven:3.8-openjdk-17-slim AS builder
 
+WORKDIR /app
+
+COPY pom.xml .
+
+RUN echo '<settings>\
+    <mirrors>\
+    <mirror>\
+    <id>huaweicloud</id>\
+    <mirrorOf>*</mirrorOf>\
+    <name>HuaweiCloud Maven</name>\
+    <url>https://mirrors.huaweicloud.com/repository/maven/</url>\
+    </mirror>\
+    <mirror>\
+    <id>aliyunmaven</id>\
+    <mirrorOf>*</mirrorOf>\
+    <name>Aliyun Maven</name>\
+    <url>https://maven.aliyun.com/repository/public</url>\
+    </mirror>\
+    </mirrors>\
+    </settings>' > /usr/share/maven/conf/settings.xml
+
+RUN mvn dependency:copy-dependencies -DoutputDirectory=/app/deps
+RUN rm -rf /app/deps/scala-library-*.jar
+
+FROM spark:3.5.5
 USER spark
-COPY ./jars/*.jar /opt/spark/jars/
-ADD ucsparktest.py /opt/spark/examples/src/main/python/ucsparktest.py
+COPY --from=builder /app/deps/*.jar /opt/spark/jars/

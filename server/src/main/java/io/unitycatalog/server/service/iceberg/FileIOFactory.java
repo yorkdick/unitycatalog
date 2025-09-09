@@ -5,6 +5,7 @@ import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.service.credential.CloudCredentialVendor;
 import io.unitycatalog.server.utils.ServerProperties;
 import io.unitycatalog.server.service.credential.CredentialContext;
+import io.unitycatalog.server.service.credential.aws.AwsCredentialVendor;
 import io.unitycatalog.server.service.credential.aws.S3StorageConfig;
 import io.unitycatalog.server.service.credential.azure.ADLSLocationUtils;
 import io.unitycatalog.server.service.credential.azure.AzureCredential;
@@ -31,8 +32,11 @@ import static io.unitycatalog.server.utils.Constants.URI_SCHEME_ABFS;
 import static io.unitycatalog.server.utils.Constants.URI_SCHEME_ABFSS;
 import static io.unitycatalog.server.utils.Constants.URI_SCHEME_GS;
 import static io.unitycatalog.server.utils.Constants.URI_SCHEME_S3;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileIOFactory {
+  private static final Logger LOGGER = LoggerFactory.getLogger(FileIOFactory.class);
 
   private final CloudCredentialVendor cloudCredentialVendor;
   private final Map<String, S3StorageConfig> s3Configurations;
@@ -59,8 +63,8 @@ public class FileIOFactory {
     ADLSLocationUtils.ADLSLocationParts locationParts = ADLSLocationUtils.parseLocation(tableLocationUri.toString());
 
     // NOTE: when fileio caching is implemented, need to set/deal with expiry here
-    Map<String, String> properties =
-      Map.of(AzureProperties.ADLS_SAS_TOKEN_PREFIX + locationParts.account(), credential.getSasToken());
+    Map<String, String> properties = Map.of(AzureProperties.ADLS_SAS_TOKEN_PREFIX + locationParts.account(),
+        credential.getSasToken());
 
     ADLSFileIO result = new ADLSFileIO();
     result.initialize(properties);
@@ -73,8 +77,7 @@ public class FileIOFactory {
     AccessToken gcpToken = cloudCredentialVendor.vendGcpToken(credentialContext);
 
     // NOTE: when fileio caching is implemented, need to set/deal with expiry here
-    Map<String, String> properties =
-      Map.of(
+    Map<String, String> properties = Map.of(
         GCPProperties.GCS_OAUTH2_TOKEN, gcpToken.getTokenValue());
 
     GCSFileIO result = new GCSFileIO();
@@ -86,8 +89,8 @@ public class FileIOFactory {
     CredentialContext context = getCredentialContextFromTableLocation(tableLocationUri);
     S3StorageConfig s3StorageConfig = s3Configurations.get(context.getStorageBase());
 
-    S3FileIO s3FileIO =
-        new S3FileIO(() -> getS3Client(getAwsCredentialsProvider(context), s3StorageConfig.getRegion()));
+    S3FileIO s3FileIO = new S3FileIO(
+        () -> getS3Client(getAwsCredentialsProvider(context), s3StorageConfig.getRegion()));
 
     s3FileIO.initialize(Map.of());
 
@@ -103,17 +106,25 @@ public class FileIOFactory {
   }
 
   private AwsCredentialsProvider getAwsCredentialsProvider(CredentialContext context) {
+    S3StorageConfig s3StorageConfig = s3Configurations.get(context.getStorageBase());
+    if (s3StorageConfig == null || s3StorageConfig.getSecretKey() == null || s3StorageConfig.getAccessKey().isEmpty()) {
+      return DefaultCredentialsProvider.create();
+    }
+
     try {
       Credentials awsSessionCredentials = cloudCredentialVendor.vendAwsCredential(context);
       return StaticCredentialsProvider.create(
-        AwsSessionCredentials.create(awsSessionCredentials.accessKeyId(), awsSessionCredentials.secretAccessKey(), awsSessionCredentials.sessionToken()));
+          AwsSessionCredentials.create(awsSessionCredentials.accessKeyId(), awsSessionCredentials.secretAccessKey(),
+              awsSessionCredentials.sessionToken()));
     } catch (BaseException e) {
+      LOGGER.warn("Falling back to default AWS credentials provider due to: {}", e.getMessage());
       return DefaultCredentialsProvider.create();
     }
   }
 
   private CredentialContext getCredentialContextFromTableLocation(URI tableLocationUri) {
-    // FIXME!! privileges are defaulted to READ only here for now as Iceberg REST impl doesn't support write
+    // FIXME!! privileges are defaulted to READ only here for now as Iceberg REST
+    // impl doesn't support write
     return CredentialContext.create(tableLocationUri, Set.of(CredentialContext.Privilege.SELECT));
   }
 }

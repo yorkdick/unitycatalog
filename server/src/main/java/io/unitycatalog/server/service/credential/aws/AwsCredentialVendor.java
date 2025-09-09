@@ -7,8 +7,12 @@ import io.unitycatalog.server.utils.ServerProperties;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -16,6 +20,7 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.Credentials;
 
 public class AwsCredentialVendor {
+  private static final Logger LOGGER = LoggerFactory.getLogger(AwsCredentialVendor.class);
 
   private final Map<String, S3StorageConfig> s3Configurations;
 
@@ -30,7 +35,8 @@ public class AwsCredentialVendor {
     }
 
     if (s3StorageConfig.getSessionToken() != null && !s3StorageConfig.getSessionToken().isEmpty()) {
-      // if a session token was supplied, then we will just return static session credentials
+      // if a session token was supplied, then we will just return static session
+      // credentials
       return Credentials.builder()
           .accessKeyId(s3StorageConfig.getAccessKey())
           .secretAccessKey(s3StorageConfig.getSecretKey())
@@ -40,6 +46,24 @@ public class AwsCredentialVendor {
 
     // TODO: cache sts client
     StsClient stsClient = getStsClientForStorageConfig(s3StorageConfig);
+
+    if (stsClient == null) {
+      AwsCredentials awsCredentials = DefaultCredentialsProvider.create().resolveCredentials();
+
+      Credentials.Builder builder =
+          Credentials.builder()
+              .accessKeyId(awsCredentials.accessKeyId())
+              .secretAccessKey(awsCredentials.secretAccessKey());
+
+      if (awsCredentials instanceof AwsSessionCredentials) {
+        String sessionToken = ((AwsSessionCredentials) awsCredentials).sessionToken();
+        builder.sessionToken(sessionToken);
+      }
+
+      return builder.build();
+    }
+
+    LOGGER.debug("Starting to assumeRole for {}", s3StorageConfig.getAwsRoleArn());
 
     // TODO: Update this with relevant user/role type info once available
     String roleSessionName = "uc-%s".formatted(UUID.randomUUID());
@@ -63,15 +87,16 @@ public class AwsCredentialVendor {
           StaticCredentialsProvider.create(
               AwsBasicCredentials.create(
                   s3StorageConfig.getAccessKey(), s3StorageConfig.getSecretKey()));
+      // TODO: should we try and set the region to something configurable or specific
+      // to the server
+      // instead?
+      return StsClient.builder()
+          .credentialsProvider(credentialsProvider)
+          .region(Region.of(s3StorageConfig.getRegion()))
+          .build();
     } else {
-      credentialsProvider = DefaultCredentialsProvider.create();
+      // credentialsProvider = DefaultCredentialsProvider.create();
+      return null;
     }
-
-    // TODO: should we try and set the region to something configurable or specific to the server
-    // instead?
-    return StsClient.builder()
-        .credentialsProvider(credentialsProvider)
-        .region(Region.of(s3StorageConfig.getRegion()))
-        .build();
   }
 }
